@@ -25,6 +25,6 @@ app.use(bodyParser.json());
 
 //routes 
 const users = require('./routes/usersRoute');
-app.use('/users', users);
+app.use('/usuarios', users);
 
 module.exports = app; 
