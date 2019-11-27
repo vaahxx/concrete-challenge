@@ -13,7 +13,6 @@ const userSchema = new Schema({
     data_criacao: {type: Date, default: Date.now},
     //data_atualizacao,
     //ultimo_login,
-    //token
 }, 
 {
     versionKey: false
