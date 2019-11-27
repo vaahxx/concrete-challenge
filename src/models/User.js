@@ -5,7 +5,7 @@ const Schema = mongoose.Schema;
 // instancia um novo schema, que representa o objeto usuário - utilizado no model
 const userSchema = new Schema({
     nome: {type: String, required: true},
-    email: {type: String, required: true, unique: true, lowercase: true},
+    email: {type: String, required: true, lowercase: true},
     senha: {type: String},
     telefones: [{
         numero: {type: Number}, ddd: {type: Number}
