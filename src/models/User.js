@@ -8,7 +8,9 @@ const userSchema = new Schema({
     email: {type: String, required: true, lowercase: true},
     senha: {type: String},
     telefones: [{
-        numero: {type: Number}, ddd: {type: Number}
+        _id: false,
+        numero: {type: Number}, 
+        ddd: {type: Number}
     }],
     data_criacao: {type: Date, default: Date.now},
     //data_atualizacao,
