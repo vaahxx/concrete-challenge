@@ -6,7 +6,7 @@ const cors = require('cors');
 const app = express();
 
 // String de conexão com o mongodb
-// banco de dados utilizado: reprograma-hemocentros
+// banco de dados utilizado: reprograma-valentina
 mongoose.connect('mongodb+srv://admin:admin@reprograma-valentina-4dsq6.mongodb.net/test', (err) => {
   if (err) console.log(err);
 });
