@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-// const { secretKey } = require('./verifyToken');
+const verifyToken = require('./verifyToken');
 
 const signUp = async (req, res, next) => {
     //verifica se o email já está cadastrado no banco de dados
@@ -16,7 +16,10 @@ const signUp = async (req, res, next) => {
     const user = new User(req.body);
     user.senha = hashedPassword;
     // gera o token do usuário
-    const generatedToken = await jwt.sign({ id: user._id }, 'secretKey');
+    const generatedToken = await jwt.sign({ id: user._id }, 'secretKey', {
+        // o token expira em 2 minutos
+        expiresIn: '120'
+    });
     user.token = generatedToken;
     try {
         const savedUser = await user.save();
@@ -40,7 +43,25 @@ const signIn = async (req, res, next) => {
     //res.header('auth-token', token).send(token);
 };
 
-const getUser = (req, res, next) => {
+const getUser = async (req, res, next) => {
+    const token = req.header('auth-token');
+    const user = await User.findOne({_id: req.params.id});
+
+    if (!token) return res.status(401).send({'mensagem': 'acesso negado, sem token'});
+
+    if (user.token !== token) return res.status(401).send({
+        mensagem: 'acesso negado, não autorizado',
+        token: token,
+        userToken: user.token
+    });
+
+    const verificado = jwt.verify(token, 'secretKey', (err, decoded) => {
+        if (err) return res.status(401).send({mensagem: 'sessão inválida, token expirado'});
+        req.auth = decoded;
+        return res.status(200).send(user);
+    });
+    console.log(verificado);
+
 
 };
 

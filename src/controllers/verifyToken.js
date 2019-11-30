@@ -6,8 +6,9 @@ exports.verifyToken = (req, res, next) => {
     if (!token) return res.status(401).send({'mensagem': 'acesso negado, sem token'});
 
     try {
-        const verificado = jwt.verify(token, secretKey);
-        req.user = verificado;
+        
+        // const verificado = jwt.verify(token, secretKey);
+        // req.user = verificado;
         next();
     } catch (err) {
         return res.status(400).send({'mensagem': 'token inválido'});
