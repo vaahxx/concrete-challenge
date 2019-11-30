@@ -18,7 +18,7 @@ const signUp = async (req, res, next) => {
     // gera o token do usuário
     const generatedToken = await jwt.sign({ id: user._id }, 'secretKey', {
         // o token expira em 2 minutos
-        expiresIn: '120'
+        expiresIn: '1h'
     });
     user.token = generatedToken;
     try {
@@ -38,9 +38,17 @@ const signIn = async (req, res, next) => {
     const validPassword = await bcrypt.compare(req.body.senha, user.senha);
     if (!validPassword) return res.status(401).json({'mensagem': 'usuário e/ou senha inválidos'});
 
+    // atualiza horario do ultimo login do usuário
+    user.update(
+        {$set: {
+            ultimo_login: Date.now(),
+            data_atualizacao: Date.now()
+            }
+        },
+        (err) => {
+            if (err) return res.status(500).send(err);
+        });
     return res.status(200).send(user);
-
-    //res.header('auth-token', token).send(token);
 };
 
 const getUser = async (req, res, next) => {
@@ -56,11 +64,14 @@ const getUser = async (req, res, next) => {
     });
 
     const verificado = jwt.verify(token, 'secretKey', (err, decoded) => {
+        console.log(err);
+
         if (err) return res.status(401).send({mensagem: 'sessão inválida, token expirado'});
         req.auth = decoded;
+        console.log(decoded);
         return res.status(200).send(user);
     });
-    console.log(verificado);
+    // console.log(verificado);
 
 
 };
