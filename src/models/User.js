@@ -9,13 +9,14 @@ const userSchema = new Schema({
     senha: {type: String},
     telefones: [{
         _id: false,
-        numero: {type: Number}, 
+        numero: {type: Number},
         ddd: {type: Number}
     }],
     data_criacao: {type: Date, default: Date.now},
-    //data_atualizacao,
-    //ultimo_login,
-}, 
+    data_atualizacao: {type: Date, default: Date.now},
+    ultimo_login: {type: Date, default: Date.now},
+    token: {type: String}
+},
 {
     versionKey: false
 });
