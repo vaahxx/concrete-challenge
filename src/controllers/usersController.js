@@ -1,83 +1,95 @@
 const User = require('../models/User');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const verifyToken = require('./verifyToken');
+const { errorMessage } = require('../helpers');
 
-const signUp = async (req, res, next) => {
-    //verifica se o email já está cadastrado no banco de dados
-    const emailExists = await User.findOne({email: req.body.email});
-    if (emailExists) return res.status(400).json({"mensagem": "email já cadastrado"});
+const signUp = async (req, res) => {
+  //verifica se o email já está cadastrado no banco de dados
+  const emailExists = await User.findOne({ email: req.body.email });
+  if (emailExists)
+    return res.status(400).json(errorMessage('email já cadastrado'));
 
-    // criptografa a senha
-    const salt = await bcrypt.genSalt(8);
-    const hashedPassword = await bcrypt.hash(req.body.senha, salt);
+  // cria um novo usuário e grava a senha criptografada
+  const user = new User(req.body);
+  user.hashPassword();
+  user.generateToken();
 
-    // cria um novo usuário e grava a senha criptografada
-    const user = new User(req.body);
-    user.senha = hashedPassword;
-    // gera o token do usuário
-    const generatedToken = await jwt.sign({ id: user._id }, 'secretKey', {
-        // o token expira em 2 minutos
-        expiresIn: '1h'
-    });
-    user.token = generatedToken;
-    try {
-        const savedUser = await user.save();
-        return res.status(200).send(savedUser);
-    } catch (err) {
-        res.status(400).json(err);
-    }
+  try {
+    const savedUser = await user.save();
+    return res.status(200).send(savedUser);
+  } catch (err) {
+    res.status(400).json(err);
+  }
 };
 
-const signIn = async (req, res, next) => {
-    //verifica se o email está cadastrado no banco de dados
-    const user = await User.findOne({email: req.body.email});
-    if (!user) return res.status(401).json({'mensagem': 'usuário e/ou senha inválidos'});
+const signIn = async (req, res) => {
+  //verifica se o email está cadastrado no banco de dados
+  const user = await User.findOne({ email: req.body.email });
 
-    //verificação de senha
-    const validPassword = await bcrypt.compare(req.body.senha, user.senha);
-    if (!validPassword) return res.status(401).json({'mensagem': 'usuário e/ou senha inválidos'});
+  if (!user)
+    return res.status(401).json(errorMessage('usuário e/ou senha inválidos'));
 
-    // atualiza horario do ultimo login do usuário
-    user.update(
-        {$set: {
-            ultimo_login: Date.now(),
-            data_atualizacao: Date.now()
-            }
-        },
-        (err) => {
-            if (err) return res.status(500).send(err);
-        });
+  //verificação de senha
+  if (!user.validatePassword())
+    return res.status(401).json(errorMessage('usuário e/ou senha inválidos'));
+
+  // atualiza horario do ultimo login do usuário
+  user.update(
+    {
+      $set: {
+        ultimo_login: Date.now(),
+        data_atualizacao: Date.now(),
+      },
+    },
+    err => {
+      if (err) return res.status(500).send(err);
+    },
+  );
+  return res.status(200).send(user);
+};
+
+const getUser = async (req, res) => {
+  const token = req.header('auth-token');
+  let user;
+  try {
+    user = await User.findOne({ _id: req.params.id });
+  } catch (error) {
+    return res.status(400).send(errorMessage('usuário inválido'));
+  }
+
+  if (!user) return res.status(400).send(errorMessage('usuário inválido'));
+
+  if (!token || user.token !== token)
+    return res.status(401).send(errorMessage('acesso negado'));
+
+  jwt.verify(token, 'secretKey', err => {
+    if (err)
+      return res
+        .status(401)
+        .send(errorMessage('sessão inválida, token expirado'));
+
     return res.status(200).send(user);
+  });
 };
 
-const getUser = async (req, res, next) => {
-    const token = req.header('auth-token');
-    const user = await User.findOne({_id: req.params.id});
+const deleteUser = async (req, res) => {
+  const user = await User.findOne({ _id: req.params.id });
 
-    if (!token) return res.status(401).send({'mensagem': 'acesso negado, sem token'});
+  if (!user) return res.status(400).json(errorMessage('email já cadastrado'));
 
-    if (user.token !== token) return res.status(401).send({
-        mensagem: 'acesso negado, não autorizado',
-        token: token,
-        userToken: user.token
-    });
-
-    const verificado = jwt.verify(token, 'secretKey', (err, decoded) => {
-        console.log(err);
-
-        if (err) return res.status(401).send({mensagem: 'sessão inválida, token expirado'});
-        req.auth = decoded;
-        console.log(decoded);
-        return res.status(200).send(user);
-    });
-    // console.log(verificado);
-
-
+  try {
+    await user.deleteOne({ _id: req.params.id });
+  } catch (error) {
+    return res
+      .status(500)
+      .json(errorMessage('ocorreu um erro, tente novamente'));
+  } finally {
+    return res.status(200).send('usuário deletado com sucesso');
+  }
 };
 
 module.exports = {
-    signUp,
-    signIn,
-    getUser
-}
+  signUp,
+  signIn,
+  getUser,
+  deleteUser,
+};
